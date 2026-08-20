@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Цветок-дыхание</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;user-select:none;-webkit-tap-highlight-color:transparent;font-family:system-ui,sans-serif}
+html,body{height:100%;background:linear-gradient(160deg,#fef9f3,#fde8f0);color:#5a3a6e;overflow:hidden}
+#app{display:grid;grid-template-rows:auto 1fr auto;height:100vh;max-width:700px;margin:0 auto;padding:14px;gap:14px}
+.head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.title{font-size:1.3rem;font-weight:800;color:#c084fc}
+.chip{background:rgba(255,255,255,.7);padding:8px 14px;border-radius:12px;font-weight:700;font-size:.9rem;backdrop-filter:blur(4px)}
+.btn{background:#fff;border:2px solid #fde8f0;padding:10px 16px;border-radius:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(192,132,252,.15);font-size:.95rem}
+.btn.primary{background:#c084fc;color:#fff;border-color:#c084fc}
+.stage{position:relative;display:grid;place-items:center;overflow:hidden}
+.flower-wrap{width:min(70vmin,420px);height:min(70vmin,420px);position:relative;display:grid;place-items:center}
+svg.flower{width:100%;height:100%;overflow:visible}
+.petal{transform-origin:200px 200px;transition:transform 3.8s cubic-bezier(.4,0,.2,1),fill 1.2s}
+.center{transition:r .8s,fill 1s}
+.phase-label{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;color:#7e4d8f;font-weight:800;text-shadow:0 2px 8px rgba(255,255,255,.9)}
+.phase-word{font-size:min(8vmin,46px);letter-spacing:1px}
+.phase-count{font-size:min(14vmin,80px);line-height:1;margin-top:4px;color:#c084fc}
+.cycle-dots{display:flex;justify-content:center;gap:10px;margin-top:14px}
+.cdot{width:14px;height:14px;border-radius:50%;background:#fde8f0;border:2px solid #f9a8d4;transition:.3s}
+.cdot.done{background:#f9a8d4;transform:scale(1.2)}
+.cdot.now{background:#c084fc;border-color:#c084fc;animation:pulse 1.2s infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.25)}}
+.hud{position:absolute;top:14px;left:14px;right:14px;display:flex;justify-content:space-between;gap:8px;pointer-events:none}
+.tap{width:min(70vmin,360px);min-height:60px;background:linear-gradient(135deg,#c084fc,#f9a8d4);border-radius:24px;border:none;color:#fff;font-size:1.1rem;font-weight:800;box-shadow:0 12px 30px rgba(192,132,252,.4);display:block;margin:0 auto;cursor:pointer;padding:14px}
+.screen{position:fixed;inset:0;background:rgba(254,249,243,.96);display:grid;place-items:center;padding:20px;z-index:50;overflow:auto}
+.card{background:#fff;border-radius:22px;padding:24px;max-width:520px;width:100%;text-align:center;box-shadow:0 8px 24px rgba(192,132,252,.2);max-height:92vh;overflow:auto}
+.card h2{color:#c084fc;margin-bottom:10px}
+.card p{margin:8px 0;line-height:1.5}
+.levels{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:14px 0}
+.lvl{padding:14px 4px;border-radius:12px;background:#fde8f0;font-weight:800;text-align:center;cursor:pointer;border:3px solid transparent;transition:.2s;font-size:.95rem}
+.lvl.un{background:linear-gradient(135deg,#fbcfe8,#fde68a)}
+.lvl.lock{opacity:.4;cursor:not-allowed;background:#f3e8ff}
+.lvl.sel{border-color:#c084fc}
+.lvl small{display:block;font-size:.65rem;margin-top:3px;font-weight:600;opacity:.85;line-height:1.1}
+.hint{font-size:.9rem;background:#fde8f0;padding:10px 14px;border-radius:10px;margin:10px 0;min-height:50px;text-align:left}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.stats div{background:#fde8f0;padding:12px;border-radius:10px}
+.stats strong{display:block;color:#c084fc;font-size:1.4rem}
+.hide{display:none!important}
+.row{display:flex;gap:8px}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="head">
+    <div class="title">🌸 Цветок-дыхание</div>
+    <button class="btn" id="menu">📚 Меню</button>
+  </header>
+  <main class="stage">
+    <div class="hud">
+      <div class="chip" id="lvlChip">—</div>
+      <div class="chip" id="cycChip">0 / 0</div>
+    </div>
+    <div class="flower-wrap">
+      <svg class="flower" id="flower" viewBox="0 0 400 400">
+        <defs>
+          <radialGradient id="pet" cx=".4" cy=".4">
+            <stop offset="0%" stop-color="#fde8f0"/>
+            <stop offset="100%" stop-color="#f9a8d4"/>
+          </radialGradient>
+          <radialGradient id="cnt" cx=".4" cy=".4">
+            <stop offset="0%" stop-color="#fef3c7"/>
+            <stop offset="100%" stop-color="#fbbf24"/>
+          </radialGradient>
+        </defs>
+        <g id="petals"></g>
+        <circle id="core" class="center" cx="200" cy="200" r="38" fill="url(#cnt)"/>
+      </svg>
+      <div class="phase-label">
+        <div class="phase-word" id="phWord">·</div>
+        <div class="phase-count" id="phCount"></div>
+      </div>
+    </div>
+    <div class="cycle-dots" id="cdots"></div>
+  </main>
+  <footer><button class="tap" id="startBtn">▶ Начать дышать</button></footer>
+</div>
+
+<div class="screen" id="menuScr">
+  <div class="card">
+    <h2>🌸 Цветок-дыхание</h2>
+    <p>Дыши вместе с цветочком. Он раскрывается — <b>вдох</b>. Закрывается — <b>выдох</b>.</p>
+    <div class="levels" id="grid"></div>
+    <div class="hint" id="hint">—</div>
+    <button class="btn primary" id="goStart" style="width:100%;padding:14px;font-size:1.05rem">▶ Начать</button>
+    <button class="btn" id="reset" style="width:100%;margin-top:8px;font-size:.85rem;opacity:.7">↻ Сбросить прогресс</button>
+  </div>
+</div>
+
+<div class="screen hide" id="doneScr">
+  <div class="card">
+    <h2 id="dt">🌸 Молодец!</h2>
+    <div class="stats" id="ds"></div>
+    <p id="df"></p>
+    <div class="row" style="margin-top:14px">
+      <button class="btn" id="toMenu" style="flex:1">📚 В меню</button>
+      <button class="btn primary" id="next" style="flex:2">▶ Дальше</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var LEVELS=[
+    {id:1,name:'Знакомство',pat:[4,0,4,0],cyc:4,showCount:false,hint:'L1. Просто дыши вместе с цветочком.'},
+    {id:2,name:'Спокойствие',pat:[4,2,4,2],cyc:5,showCount:false,hint:'L2. Добавились паузы. Замри на мгновение.'},
+    {id:3,name:'Счёт-якорь',pat:[4,4,4,0],cyc:6,showCount:true, hint:'L3. Считай вместе с цифрами в цветке.'},
+    {id:4,name:'Квадрат',   pat:[4,4,4,4],cyc:6,showCount:true, hint:'L4. Квадратное дыхание: всё по 4.'},
+    {id:5,name:'Глубина',   pat:[4,7,8,0],cyc:5,showCount:true, hint:'L5. Долгий выдох — глубокое расслабление.'}
+  ];
+  var WORDS=['вдох','держи','выдох','пауза'];
+  var KEY='flower-breath-v1';
+  var S={lv:null,cyc:0,phase:0,unlocked:1,sel:1,running:false,timer:null,countTimer:null,startTime:0,completedCycles:0};
+  var petals=[];
+
+  function $(id){return document.getElementById(id);}
+  function load(){try{var d=JSON.parse(localStorage.getItem(KEY));if(d&&d.unlocked)S.unlocked=d.unlocked;}catch(e){}}
+  function save(){try{localStorage.setItem(KEY,JSON.stringify({unlocked:S.unlocked}));}catch(e){}}
+
+  var AC=null;
+  function tone(f,d,t,v){
+    try{if(!AC)AC=new(window.AudioContext||window.webkitAudioContext)();
+    if(AC.state==='suspended')AC.resume();
+    var o=AC.createOscillator(),g=AC.createGain();
+    o.type=t||'sine';o.frequency.value=f;g.gain.value=v||.12;
+    o.connect(g);g.connect(AC.destination);o.start();
+    g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+(d||.3));
+    o.stop(AC.currentTime+(d||.3));}catch(e){}
+  }
+
+  function buildFlower(){
+    var g=$('petals');g.innerHTML='';petals=[];
+    var N=8;
+    for(var i=0;i<N;i++){
+      var ang=(360/N)*i;
+      var p=document.createElementNS('http://www.w3.org/2000/svg','ellipse');
+      p.setAttribute('cx','200');p.setAttribute('cy','120');
+      p.setAttribute('rx','38');p.setAttribute('ry','78');
+      p.setAttribute('fill','url(#pet)');
+      p.setAttribute('class','petal');
+      p.style.transform='rotate('+ang+'deg) scale(.3) translateY(60px)';
+      g.appendChild(p);petals.push(p);
+    }
+  }
+  function setFlower(state){
+    var scale,ty;
+    if(state==='in'){scale=1.05;ty=-10;}
+    else if(state==='out'){scale=.35;ty=55;}
+    else if(state==='hold-in'){scale=1.05;ty=-10;}
+    else{scale=.35;ty=55;}
+    petals.forEach(function(p,i){
+      var ang=(360/petals.length)*i;
+      p.style.transform='rotate('+ang+'deg) scale('+scale+') translateY('+ty+'px)';
+    });
+    $('core').setAttribute('r',state==='in'||state==='hold-in'?48:32);
+  }
+
+  function buildDots(){
+    var d=$('cdots');d.innerHTML='';
+    for(var i=0;i<S.lv.cyc;i++){
+      var x=document.createElement('div');x.className='cdot';d.appendChild(x);
+    }
+  }
+  function updateDots(){
+    var d=$('cdots').children;
+    for(var i=0;i<d.length;i++){
+      d[i].className='cdot'+(i<S.cyc?' done':i===S.cyc?' now':'');
+    }
+  }
+
+  function renderMenu(){
+    var g=$('grid');g.innerHTML='';
+    LEVELS.forEach(function(lv){
+      var b=document.createElement('button');
+      var un=lv.id<=S.unlocked;
+      b.className='lvl '+(un?'un':'lock')+(lv.id===S.sel?' sel':'');
+      b.innerHTML='L'+lv.id+'<small>'+lv.name+'</small>';
+      b.disabled=!un;
+      b.onclick=function(){if(un){S.sel=lv.id;renderMenu();}};
+      g.appendChild(b);
+    });
+    var sel=LEVELS.filter(function(l){return l.id===S.sel;})[0];
+    $('hint').textContent=sel?sel.hint:'';
+  }
+
+  function startLevel(id){
+    S.lv=LEVELS.filter(function(l){return l.id===id;})[0];
+    S.cyc=0;S.phase=0;S.running=true;S.startTime=Date.now();S.completedCycles=0;
+    $('lvlChip').textContent='L'+S.lv.id+' · '+S.lv.name;
+    $('cycChip').textContent='0 / '+S.lv.cyc;
+    $('menuScr').classList.add('hide');$('doneScr').classList.add('hide');
+    buildDots();updateDots();
+    setFlower('out');
+    $('phWord').textContent='готов?';$('phCount').textContent='';
+    S.timer=setTimeout(runPhase,1800);
+  }
+
+    function runPhase(){
+    if(!S.running)return;
+    if(S.cyc>=S.lv.cyc){endLevel();return;}
+    var dur=S.lv.pat[S.phase];
+    // Пропускаем фазы нулевой длительности БЕЗ звука и визуала
+    if(dur===0){
+      S.phase=(S.phase+1)%4;
+      if(S.phase===0){S.cyc++;S.completedCycles++;$('cycChip').textContent=S.cyc+' / '+S.lv.cyc;updateDots();if(S.cyc>=S.lv.cyc){endLevel();return;}}
+      S.timer=setTimeout(runPhase,50);return;
+    }
+    var word=WORDS[S.phase];
+    var stateMap=['in','hold-in','out','hold-out'];
+    setFlower(stateMap[S.phase]);
+    $('phWord').textContent=word;
+    if(S.phase===0)tone(528,.4,'sine',.10);
+    else if(S.phase===2)tone(396,.5,'sine',.10);
+    else tone(440,.15,'sine',.06);
+    if(S.lv.showCount){runCountdown(dur);}else{$('phCount').textContent='';}
+    S.timer=setTimeout(function(){
+      S.phase=(S.phase+1)%4;
+      if(S.phase===0){S.cyc++;S.completedCycles++;$('cycChip').textContent=S.cyc+' / '+S.lv.cyc;updateDots();}
+      runPhase();
+    },dur*1000);
+
+  }
+
+  function runCountdown(dur){
+    clearInterval(S.countTimer);
+    var left=dur;
+    $('phCount').textContent=left;
+    S.countTimer=setInterval(function(){
+      left--;
+      if(left<=0){clearInterval(S.countTimer);$('phCount').textContent='';return;}
+      $('phCount').textContent=left;
+    },1000);
+  }
+
+  function endLevel(){
+    S.running=false;clearTimeout(S.timer);clearInterval(S.countTimer);
+    setFlower('out');
+    [523,659,784,1047].forEach(function(f,i){setTimeout(function(){tone(f,.25,'sine',.12);},i*150);});
+    var sec=Math.round((Date.now()-S.startTime)/1000);
+    var passed=S.completedCycles>=S.lv.cyc;
+    $('dt').textContent=passed?'🌸 Прекрасно!':'🌱 Хорошее начало!';
+    $('ds').innerHTML='<div><strong>'+S.completedCycles+'</strong>циклов</div>'+'<div><strong>'+sec+'</strong>секунд</div>';
+    $('df').textContent=passed?'Дыхание ровное и красивое.':'Попробуй ещё разок — у тебя получится.';
+    if(passed&&S.lv.id===S.unlocked&&S.lv.id<LEVELS.length){
+      S.unlocked=S.lv.id+1;save();
+    }
+    var nb=$('next'),nextLv=LEVELS.filter(function(l){return l.id===S.lv.id+1;})[0];
+    if(passed&&nextLv&&nextLv.id<=S.unlocked){nb.textContent='▶ L'+nextLv.id+' '+nextLv.name;nb.dataset.next=nextLv.id;}
+    else{nb.textContent='↻ Повторить L'+S.lv.id;nb.dataset.next=S.lv.id;}
+    $('doneScr').classList.remove('hide');
+  }
+
+  function openMenu(){
+    clearTimeout(S.timer);clearInterval(S.countTimer);
+    S.running=false;setFlower('out');
+    $('phWord').textContent='·';$('phCount').textContent='';
+    $('doneScr').classList.add('hide');
+    renderMenu();$('menuScr').classList.remove('hide');
+  }
+  function resetProgress(){
+    if(confirm('Сбросить прогресс?')){S.unlocked=1;S.sel=1;save();renderMenu();}
+  }
+
+    $('startBtn').onclick=function(){if(!S.running)startLevel(S.sel);};
+  $('goStart').onclick=function(){startLevel(S.sel);};
+  $('menu').onclick=openMenu;
+  $('toMenu').onclick=openMenu;
+  $('reset').onclick=resetProgress;
+  $('next').onclick=function(){startLevel(parseInt(this.dataset.next,10));};
+
+  buildFlower();load();renderMenu();
+})();
+</script>
+</body>
+</html>
